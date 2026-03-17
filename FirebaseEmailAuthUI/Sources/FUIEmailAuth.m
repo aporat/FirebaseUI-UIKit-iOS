@@ -76,7 +76,7 @@ static NSString *const kEmailLinkSignInLinkingCredentialKey = @"FIRAuthEmailLink
 }
 
 - (instancetype)init {
-  return [self initAuthAuthUI:[FUIAuth defaultAuthUI]
+  return [self initWithAuthUI:[FUIAuth defaultAuthUI]
                  signInMethod:@"password"
               forceSameDevice:NO
         allowNewEmailAccounts:YES
@@ -85,12 +85,12 @@ static NSString *const kEmailLinkSignInLinkingCredentialKey = @"FIRAuthEmailLink
 }
 
 
-- (instancetype)initAuthAuthUI:(FUIAuth *)authUI
+- (instancetype)initWithAuthUI:(FUIAuth *)authUI
                   signInMethod:(NSString *)signInMethod
                forceSameDevice:(BOOL)forceSameDevice
          allowNewEmailAccounts:(BOOL)allowNewEmailAccounts
              actionCodeSetting:(FIRActionCodeSettings *)actionCodeSettings {
-  return [self initAuthAuthUI:authUI
+  return [self initWithAuthUI:authUI
                  signInMethod:signInMethod
               forceSameDevice:forceSameDevice
         allowNewEmailAccounts:allowNewEmailAccounts
@@ -98,7 +98,7 @@ static NSString *const kEmailLinkSignInLinkingCredentialKey = @"FIRAuthEmailLink
             actionCodeSetting:actionCodeSettings];
 }
 
-- (instancetype)initAuthAuthUI:(FUIAuth *)authUI
+- (instancetype)initWithAuthUI:(FUIAuth *)authUI
                   signInMethod:(NSString *)signInMethod
                forceSameDevice:(BOOL)forceSameDevice
          allowNewEmailAccounts:(BOOL)allowNewEmailAccounts
