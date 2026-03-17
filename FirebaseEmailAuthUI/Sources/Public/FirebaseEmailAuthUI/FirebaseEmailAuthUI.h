@@ -28,3 +28,4 @@ FOUNDATION_EXPORT const unsigned char FirebaseEmailAuthUIVersionString[];
 #import "FUIPasswordVerificationViewController.h"
 #import "FUIPasswordSignInViewController.h"
 #import "FUIPasswordSignUpViewController.h"
+#import "FUIConfirmEmailViewController.h"
