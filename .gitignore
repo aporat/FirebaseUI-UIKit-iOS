@@ -29,3 +29,4 @@ Pods/
 Podfile.lock
 *.xcworkspace/
 samples/**/GoogleService-Info.plist
+.claude/settings.local.json
