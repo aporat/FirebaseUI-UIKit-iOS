@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls /Users/aporat/Projects/FirebaseUI-UIKit-iOS && echo \"---\" && ls /Users/aporat/Projects/FirebaseUI-iOS)",
+      "Bash(echo \"EXIT=$?\")"
+    ]
+  }
+}

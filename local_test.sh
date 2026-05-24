@@ -18,7 +18,7 @@ do
     -workspace "${schemes[i]}.xcworkspace" \
     -scheme "${schemes[i]}" \
     -sdk iphonesimulator \
-    -destination 'platform=iOS Simulator,OS=latest,name=iPhone 11 Pro' \
+    -destination 'platform=iOS Simulator,OS=latest,name=iPhone 16 Pro' \
     clean build test \
     ONLY_ACTIVE_ARCH=YES \
     | xcpretty) || EXIT_STATUS=$?;
