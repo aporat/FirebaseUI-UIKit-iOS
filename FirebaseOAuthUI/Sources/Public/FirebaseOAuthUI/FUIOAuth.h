@@ -111,22 +111,22 @@ NS_ASSUME_NONNULL_BEGIN
 /** @fn appleAuthProvider
     @brief Built-in OAuth provider for Apple.
 */
-+ (FUIOAuth *)appleAuthProvider API_AVAILABLE(ios(13.0));
++ (FUIOAuth *)appleAuthProvider;
 
 /** @fn appleAuthProvider
     @brief Built-in OAuth provider for Apple.
 */
-+ (FUIOAuth *)appleAuthProviderWithAuthUI:(FUIAuth *)authUI API_AVAILABLE(ios(13.0));
++ (FUIOAuth *)appleAuthProviderWithAuthUI:(FUIAuth *)authUI;
 
 /** @fn appleAuthProvider
     @brief Built-in OAuth provider with custom UserInterfaceStyle for Apple.
 */
-+ (FUIOAuth *)appleAuthProviderWithUserInterfaceStyle:(UIUserInterfaceStyle)userInterfaceStyle API_AVAILABLE(ios(13.0));
++ (FUIOAuth *)appleAuthProviderWithUserInterfaceStyle:(UIUserInterfaceStyle)userInterfaceStyle;
 
 /** @fn appleAuthProvider
     @brief Built-in OAuth provider with custom UserInterfaceStyle for Apple.
 */
-+ (FUIOAuth *)appleAuthProviderWithAuthUI:(FUIAuth *)authUI userInterfaceStyle:(UIUserInterfaceStyle)userInterfaceStyle API_AVAILABLE(ios(13.0));
++ (FUIOAuth *)appleAuthProviderWithAuthUI:(FUIAuth *)authUI userInterfaceStyle:(UIUserInterfaceStyle)userInterfaceStyle;
 
 @end
 

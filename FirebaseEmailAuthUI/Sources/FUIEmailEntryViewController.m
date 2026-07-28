@@ -123,10 +123,8 @@ static NSString *const kNextButtonAccessibilityID = @"NextButtonAccessibilityID"
                                         target:nil
                                         action:nil];
 
-    if (@available(iOS 13, *)) {
-      if (!self.authUI.isInteractiveDismissEnabled) {
-        self.modalInPresentation = YES;
-      }
+    if (!self.authUI.isInteractiveDismissEnabled) {
+      self.modalInPresentation = YES;
     }
   }
 }
@@ -298,9 +296,7 @@ static NSString *const kNextButtonAccessibilityID = @"NextButtonAccessibilityID"
   cell.textField.autocapitalizationType = UITextAutocapitalizationTypeNone;
   cell.textField.returnKeyType = UIReturnKeyNext;
   cell.textField.keyboardType = UIKeyboardTypeEmailAddress;
-  if (@available(iOS 11.0, *)) {
-    cell.textField.textContentType = UITextContentTypeUsername; 
-  }
+  cell.textField.textContentType = UITextContentTypeUsername;
   [cell.textField addTarget:self
                      action:@selector(textFieldDidChange)
            forControlEvents:UIControlEventEditingChanged];

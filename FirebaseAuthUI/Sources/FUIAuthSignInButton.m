@@ -60,32 +60,27 @@ static const CGFloat kFontSize = 12.0f;
   }
 
   self.backgroundColor = backgroundColor;
-  [self setTitle:text forState:UIControlStateNormal];
-  [self setTitleColor:textColor forState:UIControlStateNormal];
-  self.titleLabel.font = [UIFont boldSystemFontOfSize:kFontSize];
-  self.titleLabel.lineBreakMode = NSLineBreakByWordWrapping;
-  [self setImage:image forState:UIControlStateNormal];
 
-  CGFloat paddingTitle = 8.0f;
-  CGFloat contentWidth = self.imageView.frame.size.width + paddingTitle + self.titleLabel.frame.size.width;
-  CGFloat paddingImage = 8.0f;
-  if (buttonAlignment == FUIButtonAlignmentCenter) {
-    paddingImage = (frame.size.width - contentWidth) / 2 - 4.0f;
-  }
-  BOOL isLTRLayout = [[UIApplication sharedApplication] userInterfaceLayoutDirection] ==
-      UIUserInterfaceLayoutDirectionLeftToRight;
-  if (isLTRLayout) {
-    [self setTitleEdgeInsets:UIEdgeInsetsMake(0, paddingTitle, 0, paddingImage + paddingTitle)];
-    [self setContentEdgeInsets:UIEdgeInsetsMake(0, paddingImage, 0, -paddingImage - paddingTitle)];
-    [self setContentHorizontalAlignment:UIControlContentHorizontalAlignmentLeft];
-  } else {
-    [self setTitleEdgeInsets:UIEdgeInsetsMake(0, paddingImage + paddingTitle, 0, paddingTitle)];
-    [self setContentEdgeInsets:UIEdgeInsetsMake(0, -paddingImage - paddingTitle, 0, paddingImage)];
-    [self setContentHorizontalAlignment:UIControlContentHorizontalAlignmentRight];
-  }
-  
-  
-  
+  UIFont *titleFont = [UIFont boldSystemFontOfSize:kFontSize];
+  UIButtonConfiguration *configuration = [UIButtonConfiguration plainButtonConfiguration];
+  configuration.image = image;
+  configuration.title = text;
+  configuration.baseForegroundColor = textColor;
+  configuration.imagePadding = 8.0f;
+  configuration.contentInsets = NSDirectionalEdgeInsetsMake(0, 8.0f, 0, 8.0f);
+  configuration.titleLineBreakMode = NSLineBreakByWordWrapping;
+  configuration.titleTextAttributesTransformer =
+      ^NSDictionary<NSAttributedStringKey, id> *(NSDictionary<NSAttributedStringKey, id> *attributes) {
+    NSMutableDictionary<NSAttributedStringKey, id> *updated = [attributes mutableCopy];
+    updated[NSFontAttributeName] = titleFont;
+    return updated;
+  };
+  self.configuration = configuration;
+
+  self.contentHorizontalAlignment = buttonAlignment == FUIButtonAlignmentCenter
+      ? UIControlContentHorizontalAlignmentCenter
+      : UIControlContentHorizontalAlignmentLeading;
+
   self.layer.cornerRadius = kCornerRadius;
 
   // Add a drop shadow.
@@ -94,8 +89,6 @@ static const CGFloat kFontSize = 12.0f;
   self.layer.shadowOpacity = kDropShadowAlpha;
   self.layer.shadowRadius = kDropShadowRadius;
   self.layer.shadowOffset = CGSizeMake(0, kDropShadowYOffset);
-
-  self.adjustsImageWhenHighlighted = NO;
 
   return self;
 }

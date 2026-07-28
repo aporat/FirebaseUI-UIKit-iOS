@@ -124,10 +124,8 @@ static const CGFloat kTextFieldRightViewSize = 36.0f;
   self.navigationItem.rightBarButtonItem = saveButtonItem;
 
   [self enableDynamicCellHeightForTableView:_tableView];
-  
-  if (@available(iOS 13.0, *)) {
-    _tableView.backgroundColor = [UIColor systemBackgroundColor];
-  }
+
+  _tableView.backgroundColor = [UIColor systemBackgroundColor];
 }
 
 - (void)viewDidLayoutSubviews {
@@ -281,9 +279,7 @@ static const CGFloat kTextFieldRightViewSize = 36.0f;
     _emailField.keyboardType = UIKeyboardTypeEmailAddress;
     _emailField.autocorrectionType = UITextAutocorrectionTypeNo;
     _emailField.autocapitalizationType = UITextAutocapitalizationTypeNone;
-    if (@available(iOS 11.0, *)) {
-      _emailField.textContentType = UITextContentTypeUsername;
-    }
+    _emailField.textContentType = UITextContentTypeUsername;
   } else if (indexPath.row == 1) {
       if (_requireDisplayName) {
           cell.label.text = FUILocalizedString(kStr_Name);
@@ -294,9 +290,7 @@ static const CGFloat kTextFieldRightViewSize = 36.0f;
           _nameField.returnKeyType = UIReturnKeyNext;
           _nameField.keyboardType = UIKeyboardTypeDefault;
           _nameField.autocapitalizationType = UITextAutocapitalizationTypeWords;
-          if (@available(iOS 10.0, *)) {
-              _nameField.textContentType = UITextContentTypeName;
-          }
+          _nameField.textContentType = UITextContentTypeName;
       } else {
           cell.label.text = FUILocalizedString(kStr_Password);
           cell.accessibilityIdentifier = kPasswordSignUpCellAccessibilityID;
@@ -307,9 +301,7 @@ static const CGFloat kTextFieldRightViewSize = 36.0f;
           _passwordField.rightViewMode = UITextFieldViewModeAlways;
           _passwordField.returnKeyType = UIReturnKeyNext;
           _passwordField.keyboardType = UIKeyboardTypeDefault;
-          if (@available(iOS 11.0, *)) {
-              _passwordField.textContentType = UITextContentTypePassword;
-          }
+          _passwordField.textContentType = UITextContentTypePassword;
       }
   } else if (indexPath.row == 2) {
     cell.label.text = FUILocalizedString(kStr_Password);
@@ -321,9 +313,7 @@ static const CGFloat kTextFieldRightViewSize = 36.0f;
     _passwordField.rightViewMode = UITextFieldViewModeAlways;
     _passwordField.returnKeyType = UIReturnKeyNext;
     _passwordField.keyboardType = UIKeyboardTypeDefault;
-    if (@available(iOS 11.0, *)) {
-      _passwordField.textContentType = UITextContentTypePassword;
-    }
+    _passwordField.textContentType = UITextContentTypePassword;
   }
   [cell.textField addTarget:self
                      action:@selector(textFieldDidChange)

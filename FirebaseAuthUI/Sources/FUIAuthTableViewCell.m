@@ -21,10 +21,8 @@
 - (void)awakeFromNib {
   [super awakeFromNib];
   
-  if (@available(iOS 13.0, *)) {
-    self.textField.textColor = [UIColor labelColor];
-    self.label.textColor = [UIColor labelColor];
-  }
+  self.textField.textColor = [UIColor labelColor];
+  self.label.textColor = [UIColor labelColor];
 }
 
 - (void)setLabel:(UILabel *)label {

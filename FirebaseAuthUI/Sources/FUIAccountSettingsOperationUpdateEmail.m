@@ -79,7 +79,8 @@ NS_ASSUME_NONNULL_BEGIN
     [self showAlertWithMessage:FUILocalizedString(kStr_InvalidEmailError)];
   } else {
     [self.delegate incrementActivity];
-    [self.delegate.auth.currentUser updateEmail:email completion:^(NSError *_Nullable error) {
+    [self.delegate.auth.currentUser sendEmailVerificationBeforeUpdatingEmail:email
+                                                                  completion:^(NSError *_Nullable error) {
       [self.delegate decrementActivity];
       [self finishOperationWithError:error];
       if (!error) {

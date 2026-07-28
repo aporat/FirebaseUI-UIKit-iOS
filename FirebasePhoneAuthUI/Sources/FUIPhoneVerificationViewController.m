@@ -296,44 +296,46 @@ static NSString *const kLinkPlaceholderPattern = @"\\[([^\\]]+)\\]";
   [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
+- (CGFloat)topOffset {
+  return self.navigationController.navigationBar.frame.size.height +
+      self.view.window.windowScene.statusBarManager.statusBarFrame.size.height;
+}
+
 - (void)keyboardWasShown:(NSNotification*)aNotification {
   NSDictionary* info = [aNotification userInfo];
   CGSize kbSize = [[info objectForKey:UIKeyboardFrameBeginUserInfoKey] CGRectValue].size;
-  CGFloat topOffset = self.navigationController.navigationBar.frame.size.height +
-      [UIApplication sharedApplication].statusBarFrame.size.height;
-  
-  UIEdgeInsets contentInsets = UIEdgeInsetsMake(topOffset, 0.0, kbSize.height, 0.0);
-  
-  [UIView beginAnimations:nil context:NULL];
-  
-  NSDictionary *userInfo = [aNotification userInfo];
-  [UIView setAnimationDuration:[userInfo[UIKeyboardAnimationDurationUserInfoKey] doubleValue]];
-  [UIView setAnimationCurve:[userInfo[UIKeyboardAnimationCurveUserInfoKey] integerValue]];
+  UIEdgeInsets contentInsets = UIEdgeInsetsMake([self topOffset], 0.0, kbSize.height, 0.0);
 
-  _scrollView.contentInset = contentInsets;
-  _scrollView.scrollIndicatorInsets = contentInsets;
-  
-  [_scrollView scrollRectToVisible:_codeField.frame animated:NO];
-
-  [UIView commitAnimations];
+  NSTimeInterval duration = [info[UIKeyboardAnimationDurationUserInfoKey] doubleValue];
+  UIViewAnimationOptions curve =
+      [info[UIKeyboardAnimationCurveUserInfoKey] unsignedIntegerValue] << 16;
+  [UIView animateWithDuration:duration
+                        delay:0
+                      options:curve
+                   animations:^{
+    self->_scrollView.contentInset = contentInsets;
+    self->_scrollView.verticalScrollIndicatorInsets = contentInsets;
+    [self->_scrollView scrollRectToVisible:self->_codeField.frame animated:NO];
+  }
+                   completion:nil];
 }
 
 - (void)keyboardWillBeHidden:(NSNotification*)aNotification {
+  NSDictionary *info = [aNotification userInfo];
   UIEdgeInsets contentInsets = UIEdgeInsetsZero;
-  CGFloat topOffset = self.navigationController.navigationBar.frame.size.height +
-      [UIApplication sharedApplication].statusBarFrame.size.height;
-  contentInsets.top = topOffset;
+  contentInsets.top = [self topOffset];
 
-  [UIView beginAnimations:nil context:NULL];
-  
-  NSDictionary *userInfo = [aNotification userInfo];
-  [UIView setAnimationDuration:[userInfo[UIKeyboardAnimationDurationUserInfoKey] doubleValue]];
-  [UIView setAnimationCurve:[userInfo[UIKeyboardAnimationCurveUserInfoKey] integerValue]];
-
-  _scrollView.contentInset = contentInsets;
-  _scrollView.scrollIndicatorInsets = contentInsets;
-
-  [UIView commitAnimations];
+  NSTimeInterval duration = [info[UIKeyboardAnimationDurationUserInfoKey] doubleValue];
+  UIViewAnimationOptions curve =
+      [info[UIKeyboardAnimationCurveUserInfoKey] unsignedIntegerValue] << 16;
+  [UIView animateWithDuration:duration
+                        delay:0
+                      options:curve
+                   animations:^{
+    self->_scrollView.contentInset = contentInsets;
+    self->_scrollView.verticalScrollIndicatorInsets = contentInsets;
+  }
+                   completion:nil];
 }
 
 @end

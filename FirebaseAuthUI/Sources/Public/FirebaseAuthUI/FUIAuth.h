@@ -198,7 +198,7 @@ __attribute__((deprecated("Instead use authUI:didSignInWithAuthDataResult:error:
 /** @property interactiveDismissEnabled
     @brief Whether or not interactive dismiss should be enabled on iOS 13 and above devices.
  */
-@property(nonatomic, assign, getter=isInteractiveDismissEnabled) BOOL interactiveDismissEnabled API_AVAILABLE(ios(13));
+@property(nonatomic, assign, getter=isInteractiveDismissEnabled) BOOL interactiveDismissEnabled;
 
 /** @property customStringsBundle
     @brief Custom strings bundle supplied by the developer. Nil when there is no custom strings

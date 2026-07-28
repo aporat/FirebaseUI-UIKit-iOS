@@ -296,16 +296,13 @@ static NSString *const kEmailLinkSignInLinkingCredentialKey = @"FIRAuthEmailLink
   if ([providerID isEqualToString:@"facebook.com"]) {
     NSData *unverifiedProviderCredentialData = [GULUserDefaults.standardUserDefaults
                                                 objectForKey:kEmailLinkSignInLinkingCredentialKey];
-    FIRAuthCredential *unverifiedProviderCredential;
-
-    // TODO:
-    // The replacement method for `unarchiveObjectWithData:` requires NSSecureCoding, which
-    // FIRAuthCredential does not yet conform to.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    unverifiedProviderCredential =
-        [NSKeyedUnarchiver unarchiveObjectWithData:unverifiedProviderCredentialData];
-#pragma clang diagnostic pop
+    FIRAuthCredential *unverifiedProviderCredential = nil;
+    if (unverifiedProviderCredentialData) {
+      unverifiedProviderCredential =
+          [NSKeyedUnarchiver unarchivedObjectOfClass:[FIRAuthCredential class]
+                                            fromData:unverifiedProviderCredentialData
+                                               error:NULL];
+    }
 
     FIRAuthCredential *emailLinkCredential =
     [FIREmailAuthProvider credentialWithEmail:email link:self.emailLink];
@@ -454,6 +451,22 @@ static NSString *const kEmailLinkSignInLinkingCredentialKey = @"FIRAuthEmailLink
   [self.authUI.auth signInWithCredential:credential completion:completeSignInBlock];
 }
 
+/** @fn keyWindowRootViewController
+    @brief Returns the root view controller of the key window of the foreground-active scene.
+ */
++ (nullable UIViewController *)keyWindowRootViewController {
+  for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+    if (![scene isKindOfClass:[UIWindowScene class]]) {
+      continue;
+    }
+    UIWindow *keyWindow = ((UIWindowScene *)scene).keyWindow;
+    if (keyWindow) {
+      return keyWindow.rootViewController;
+    }
+  }
+  return nil;
+}
+
 - (void)handleDifferentDevice {
   UINavigationController *authViewController = [self.authUI authViewController];
   void (^completion)(void) = ^(){
@@ -464,7 +477,7 @@ static NSString *const kEmailLinkSignInLinkingCredentialKey = @"FIRAuthEmailLink
   };
 
   if (!(authViewController.isViewLoaded && authViewController.view.window)) {
-    [UIApplication.sharedApplication.keyWindow.rootViewController
+    [[FUIEmailAuth keyWindowRootViewController]
        presentViewController:authViewController animated:YES completion:completion];
   } else {
     completion();
@@ -479,7 +492,7 @@ static NSString *const kEmailLinkSignInLinkingCredentialKey = @"FIRAuthEmailLink
   };
 
   if (!(authViewController.isViewLoaded && authViewController.view.window)) {
-    [UIApplication.sharedApplication.keyWindow.rootViewController
+    [[FUIEmailAuth keyWindowRootViewController]
      presentViewController:authViewController animated:YES completion:completion];
   } else {
     completion();
@@ -712,7 +725,9 @@ static NSString *const kEmailLinkSignInLinkingCredentialKey = @"FIRAuthEmailLink
         [self generateURLParametersAndLocalCache:email
                                  linkingProvider:newCredential.provider];
 
-        NSData *data = [NSKeyedArchiver archivedDataWithRootObject:newCredential];
+        NSData *data = [NSKeyedArchiver archivedDataWithRootObject:newCredential
+                                             requiringSecureCoding:YES
+                                                             error:NULL];
         [GULUserDefaults.standardUserDefaults setObject:data forKey:kEmailLinkSignInLinkingCredentialKey];
 
         void (^completion)(NSError * _Nullable error) = ^(NSError * _Nullable error){

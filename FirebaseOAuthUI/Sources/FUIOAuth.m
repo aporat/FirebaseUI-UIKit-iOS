@@ -298,19 +298,15 @@ NS_ASSUME_NONNULL_BEGIN
   _providerSignInCompletion = completion;
 
   if ([self.providerID isEqualToString:@"apple.com"] && !self.authUI.isEmulatorEnabled) {
-    if (@available(iOS 13.0, *)) {
-      NSString *nonce = [FUIAuthUtils randomNonce];
-      self.currentNonce = nonce;
-      ASAuthorizationAppleIDRequest *request = [[[ASAuthorizationAppleIDProvider alloc] init] createRequest];
-      request.requestedScopes = @[ASAuthorizationScopeFullName, ASAuthorizationScopeEmail];
-      request.nonce = [FUIAuthUtils stringBySHA256HashingString:nonce];
-      ASAuthorizationController* controller = [[ASAuthorizationController alloc] initWithAuthorizationRequests:@[request]];
-      controller.delegate = self;
-      controller.presentationContextProvider = self;
-      [controller performRequests];
-    } else {
-      NSLog(@"Sign in with Apple is only available on iOS 13+.");
-    }
+    NSString *nonce = [FUIAuthUtils randomNonce];
+    self.currentNonce = nonce;
+    ASAuthorizationAppleIDRequest *request = [[[ASAuthorizationAppleIDProvider alloc] init] createRequest];
+    request.requestedScopes = @[ASAuthorizationScopeFullName, ASAuthorizationScopeEmail];
+    request.nonce = [FUIAuthUtils stringBySHA256HashingString:nonce];
+    ASAuthorizationController* controller = [[ASAuthorizationController alloc] initWithAuthorizationRequests:@[request]];
+    controller.delegate = self;
+    controller.presentationContextProvider = self;
+    [controller performRequests];
   } else {
     provider.scopes = self.scopes;
     NSMutableDictionary *customParameters = [NSMutableDictionary dictionary];
@@ -358,7 +354,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - ASAuthorizationControllerDelegate
 
-- (void)authorizationController:(ASAuthorizationController *)controller didCompleteWithAuthorization:(ASAuthorization *)authorization API_AVAILABLE(ios(13.0)) {
+- (void)authorizationController:(ASAuthorizationController *)controller didCompleteWithAuthorization:(ASAuthorization *)authorization {
   ASAuthorizationAppleIDCredential *appleIDCredential = authorization.credential;
   NSData *rawIdentityToken = appleIDCredential.identityToken;
   if (rawIdentityToken == nil) {
@@ -376,7 +372,7 @@ NS_ASSUME_NONNULL_BEGIN
   _providerSignInCompletion(credential, nil, nil, nil);
 }
 
-- (void)authorizationController:(ASAuthorizationController *)controller didCompleteWithError:(NSError *)error API_AVAILABLE(ios(13.0)) {
+- (void)authorizationController:(ASAuthorizationController *)controller didCompleteWithError:(NSError *)error {
     NSLog(@"%@", error.description);
     // canceled/failed/invalid/Nothandled/Unknown
     if (_providerSignInCompletion) {
@@ -386,7 +382,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - ASAuthorizationControllerPresentationContextProviding
 
-- (ASPresentationAnchor)presentationAnchorForAuthorizationController:(ASAuthorizationController *)controller API_AVAILABLE(ios(13.0)) {
+- (ASPresentationAnchor)presentationAnchorForAuthorizationController:(ASAuthorizationController *)controller {
   return self.presentingViewController.view.window;
 }
 

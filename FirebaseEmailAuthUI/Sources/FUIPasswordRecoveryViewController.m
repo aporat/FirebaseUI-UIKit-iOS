@@ -92,11 +92,9 @@ static const CGFloat kFooterTextViewHorizontalInset = 8.0f;
   self.navigationItem.rightBarButtonItem = sendButtonItem;
 
   [self enableDynamicCellHeightForTableView:_tableView];
-  
-  if (@available(iOS 13.0, *)) {
-    _tableView.backgroundColor = [UIColor systemBackgroundColor];
-    self.footerTextView.textColor = [UIColor secondaryLabelColor];
-  }
+
+  _tableView.backgroundColor = [UIColor systemBackgroundColor];
+  self.footerTextView.textColor = [UIColor secondaryLabelColor];
 }
 
 - (void)viewDidLayoutSubviews {
@@ -184,9 +182,7 @@ static const CGFloat kFooterTextViewHorizontalInset = 8.0f;
   _emailField.keyboardType = UIKeyboardTypeEmailAddress;
   _emailField.autocorrectionType = UITextAutocorrectionTypeNo;
   _emailField.autocapitalizationType = UITextAutocapitalizationTypeNone;
-  if (@available(iOS 11.0, *)) {
-    _emailField.textContentType = UITextContentTypeUsername;
-  }
+  _emailField.textContentType = UITextContentTypeUsername;
   [cell.textField addTarget:self
                      action:@selector(textFieldDidChange)
            forControlEvents:UIControlEventEditingChanged];
