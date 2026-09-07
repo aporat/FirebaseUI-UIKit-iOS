@@ -11,10 +11,12 @@ You can use Firebase Phone Authentication to sign in a user by sending an SMS me
 
 ## Installation
 ### Importing FirebaseUI Phone Auth components
-Add the following to your `Podfile`:
-```ruby
- pod 'FirebaseUI/Auth'
- pod 'FirebaseUI/Phone'
+Add the package to your project with Swift Package Manager (see the
+[root README](../README.md#installing-firebaseui-for-ios)) and link these products:
+
+```swift
+.product(name: "FirebaseAuthUI", package: "FirebaseUI-UIKit-iOS"),
+.product(name: "FirebasePhoneAuthUI", package: "FirebaseUI-UIKit-iOS"),
 ```
 
 ### Configuring sign-in provider

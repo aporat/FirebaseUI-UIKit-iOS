@@ -30,15 +30,19 @@ and [Web](https://github.com/firebase/firebaseui-web/).
 
 ## Installation
 ### Importing FirebaseUI components for auth
-Add the following to your `Podfile`:
-```ruby
-pod 'FirebaseUI/Auth'
+Add the package to your project with Swift Package Manager (see the
+[root README](../README.md#installing-firebaseui-for-ios)) and link the products you need.
+`FirebaseAuthUI` is required; add one product per sign-in method you want to offer:
 
-pod 'FirebaseUI/Email'
-pod 'FirebaseUI/Google'
-pod 'FirebaseUI/Facebook'
-pod 'FirebaseUI/Phone'
-pod 'FirebaseUI/OAuth'
+```swift
+.product(name: "FirebaseAuthUI", package: "FirebaseUI-UIKit-iOS"),
+
+.product(name: "FirebaseEmailAuthUI", package: "FirebaseUI-UIKit-iOS"),
+.product(name: "FirebaseGoogleAuthUI", package: "FirebaseUI-UIKit-iOS"),
+.product(name: "FirebaseFacebookAuthUI", package: "FirebaseUI-UIKit-iOS"),
+.product(name: "FirebasePhoneAuthUI", package: "FirebaseUI-UIKit-iOS"),
+.product(name: "FirebaseOAuthUI", package: "FirebaseUI-UIKit-iOS"),
+.product(name: "FirebaseAnonymousAuthUI", package: "FirebaseUI-UIKit-iOS"),
 ```
 
 ### Configuring sign-in providers

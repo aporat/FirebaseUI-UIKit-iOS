@@ -1,60 +1,66 @@
-# FirebaseUI for iOS — UI Bindings for Firebase
+# FirebaseUI for iOS — UIKit Fork
 
-![Anonymous Auth](https://github.com/firebase/FirebaseUI-iOS/actions/workflows/anonymousauth.yml/badge.svg) ![Auth](https://github.com/firebase/FirebaseUI-iOS/actions/workflows/auth.yml/badge.svg) ![Database](https://github.com/firebase/FirebaseUI-iOS/actions/workflows/database.yml/badge.svg) ![Email Auth](https://github.com/firebase/FirebaseUI-iOS/actions/workflows/emailauth.yml/badge.svg) ![Facebook Auth](https://github.com/firebase/FirebaseUI-iOS/actions/workflows/facebookauth.yml/badge.svg) ![Firestore](https://github.com/firebase/FirebaseUI-iOS/actions/workflows/firestore.yml/badge.svg) ![Google Auth](https://github.com/firebase/FirebaseUI-iOS/actions/workflows/googleauth.yml/badge.svg) ![OAuth](https://github.com/firebase/FirebaseUI-iOS/actions/workflows/oauth.yml/badge.svg) ![Phone Auth](https://github.com/firebase/FirebaseUI-iOS/actions/workflows/phoneauth.yml/badge.svg) ![Storage](https://github.com/firebase/FirebaseUI-iOS/actions/workflows/storage.yml/badge.svg) ![Samples](https://github.com/firebase/FirebaseUI-iOS/actions/workflows/sample.yml/badge.svg)
+This is a UIKit-only fork of [FirebaseUI for iOS](https://github.com/firebase/FirebaseUI-iOS). It keeps the Objective-C UIKit components (auth flows, Realtime Database, Firestore, and Storage bindings) and drops the SwiftUI packages, CocoaPods support, and the sample apps that shipped upstream.
 
 FirebaseUI is an open-source library for iOS that allows you to quickly connect common UI elements to the [Firebase](https://firebase.google.com?utm_source=FirebaseUI-iOS) database for data storage, allowing views to be updated in realtime as they change, and providing simple interfaces for common tasks like displaying lists or collections of items.
 
-Additionally, FirebaseUI simplifies Firebase authentication by providing easy to use auth methods that integrate with common identity providers like Facebook, Twitter, and Google as well as allowing developers to use a built in headful UI for ease of development.
+Additionally, FirebaseUI simplifies Firebase authentication by providing easy to use auth methods that integrate with common identity providers like Facebook, Apple, and Google as well as allowing developers to use a built in headful UI for ease of development.
 
 FirebaseUI clients are also available for [Android](https://github.com/firebase/FirebaseUI-Android) and [web](https://github.com/firebase/firebaseui-web).
 
-![](https://raw.githubusercontent.com/firebase/FirebaseUI-iOS/main/samples/demo.gif)
+## Requirements
+
+- iOS 18.0 or later
+- Xcode 16 or later (Swift tools version 6.0)
+- Swift Package Manager. CocoaPods and Carthage are not supported by this fork.
 
 ## Installing FirebaseUI for iOS
 
-FirebaseUI supports iOS 10.0+ and Xcode 11+. We recommend using [CocoaPods](https://cocoapods.org/pods/FirebaseUI), add
-the following to your `Podfile`:
+Add the package to your project in Xcode with **File → Add Package Dependencies…** and enter the repository URL:
 
-```ruby
-pod 'FirebaseUI', '~> 8.0'       # Pull in all Firebase UI features
+```
+https://github.com/aporat/FirebaseUI-UIKit-iOS
 ```
 
-If you don't want to use all of FirebaseUI, there are multiple subspecs which can selectively install subsets of the full feature set:
+Or add it to the `dependencies` of your own `Package.swift`:
 
-```ruby
-# Only pull in Firestore features
-pod 'FirebaseUI/Firestore'
-
-# Only pull in Database features
-pod 'FirebaseUI/Database'
-
-# Only pull in Storage features
-pod 'FirebaseUI/Storage'
-
-# Only pull in Auth features
-pod 'FirebaseUI/Auth'
-
-# Only pull in Facebook login features
-pod 'FirebaseUI/Facebook'
-
-# Only pull in Google login features
-pod 'FirebaseUI/Google'
-
-# Only pull in Phone Auth login features
-pod 'FirebaseUI/Phone'
+```swift
+.package(url: "https://github.com/aporat/FirebaseUI-UIKit-iOS", branch: "UIKit"),
 ```
 
-If you're including FirebaseUI in a Swift project, make sure you also have:
+Then add only the products you need to your target. Each product is an independent library:
 
-```ruby
-platform :ios, '13.0'
-use_frameworks!
+| Product                   | What it provides                                   |
+| ------------------------- | -------------------------------------------------- |
+| `FirebaseAuthUI`          | Core auth picker, account settings, shared UI      |
+| `FirebaseEmailAuthUI`     | Email / password and email-link sign-in            |
+| `FirebasePhoneAuthUI`     | Phone number sign-in                               |
+| `FirebaseGoogleAuthUI`    | Google Sign-In                                     |
+| `FirebaseFacebookAuthUI`  | Facebook Login                                     |
+| `FirebaseOAuthUI`         | Sign in with Apple, Twitter, GitHub, Microsoft, Yahoo, and other OAuth providers |
+| `FirebaseAnonymousAuthUI` | Anonymous sign-in                                  |
+| `FirebaseDatabaseUI`      | Realtime Database table and collection view bindings |
+| `FirebaseFirestoreUI`     | Firestore table and collection view bindings       |
+| `FirebaseStorageUI`       | Cloud Storage image loading via SDWebImage         |
+
+The auth provider libraries all depend on `FirebaseAuthUI`, so adding one of them pulls the core library in automatically. In a `Package.swift` target they look like this:
+
+```swift
+.product(name: "FirebaseAuthUI", package: "FirebaseUI-UIKit-iOS"),
+.product(name: "FirebaseEmailAuthUI", package: "FirebaseUI-UIKit-iOS"),
+.product(name: "FirebaseGoogleAuthUI", package: "FirebaseUI-UIKit-iOS"),
 ```
 
-Otherwise, you can include the FirebaseUI Xcode project from this repo in
-your project. You also need to 
-[add the Firebase framework](https://firebase.google.com/docs/ios/setup) 
-to your project.
+You also need to [add the Firebase SDK](https://firebase.google.com/docs/ios/setup) to your project and call `FirebaseApp.configure()` before using any FirebaseUI component. The Firebase, Google Sign-In, Facebook, and SDWebImage SDKs are resolved as transitive dependencies of this package.
+
+### Provider configuration
+
+Some providers need extra project configuration:
+
+- **Google Sign-In**: add a URL type to your target with the `REVERSED_CLIENT_ID` value from your `GoogleService-Info.plist`.
+- **Facebook Login**: add a `fb{your-app-id}` URL type and the `FacebookAppID` key to your `Info.plist`, and enable the Keychain Sharing capability. See the [Facebook iOS SDK setup guide](https://developers.facebook.com/docs/ios/getting-started) for details.
+- **Sign in with Apple**: enable the Sign in with Apple capability on your target.
+- **Phone Auth**: enable the Push Notifications capability and the Remote notifications background mode, and upload your APNs key or certificate to the Firebase console so silent pushes can be used for app verification. See the [Firebase phone auth guide](https://firebase.google.com/docs/auth/ios/phone-auth).
 
 ## Documentation
 
@@ -69,88 +75,32 @@ project folders.
 
 ## Local Setup
 
-If you'd like to contribute to FirebaseUI for iOS, you'll need to run the
-following commands to get your environment set up:
+Clone the repository and open the package directly in Xcode:
 
 ```bash
-$ git clone https://github.com/firebase/FirebaseUI-iOS.git
-$ cd FirebaseUI-iOS
-$ cd Auth # or PhoneAuth, Database, etc
-$ pod install
+git clone https://github.com/aporat/FirebaseUI-UIKit-iOS.git
+cd FirebaseUI-UIKit-iOS
+open Package.swift
 ```
 
-Alternatively you can use `pod try FirebaseUI` to install the Objective-C or Swift sample projects.
+Xcode resolves the dependencies and exposes one scheme per product. To build a library from the command line:
 
-## Sample Project Configuration
+```bash
+xcodebuild -scheme FirebaseEmailAuthUI -destination 'generic/platform=iOS Simulator' build
+```
 
-You'll have to configure your Xcode project in order to run the samples.
+## Differences from upstream
 
-1. Your Xcode project should contain a `GoogleService-Info.plist`, downloaded from [Firebase console](https://console.firebase.google.com) when you add your app to a Firebase project.<br>
-Copy the `GoogleService-Info.plist` into the sample project folder (`samples/obj-c/GoogleService-Info.plist` or `samples/swift/GoogleService-Info.plist`).
+- SwiftUI packages, CocoaPods podspecs, Carthage support, and the sample apps have been removed.
+- The minimum deployment target is iOS 18, and pre-iOS 13 availability checks have been dropped.
+- `FUIEmailAuth` initializers are named `initWithAuthUI:signInMethod:…` instead of `initAuthAuthUI:…`.
+- The email sign-in flow no longer calls the deprecated `fetchSignInMethodsForEmail:`, so it works with Firebase's Email Enumeration Protection enabled.
+- Dependencies are tracked against current releases: Firebase 12, GoogleSignIn 10, and Facebook SDK 18.
 
-1. Update URL Types.<br>
-Go to `Project Settings -> Info tab -> Url Types` and update values for:
-	+ `REVERSED_CLIENT_ID` (get value from `GoogleService-Info.plist`)
-	+ `fb{your-app-id}` (put Facebook App Id)
+## Contributing
 
-1. Update `Info.plist` with Facebook configuration values
-	+ `FacebookAppID -> {your-app-id}` (put Facebook App Id)
+This fork tracks the upstream repository loosely. Bug reports and pull requests are welcome; changes that apply to the shared Objective-C sources are best sent upstream to [firebase/FirebaseUI-iOS](https://github.com/firebase/FirebaseUI-iOS) as well.
 
-1. Enable Keychain Sharing.<br>
-Facebook SDK requires keychain sharing.<br>
-This can be done here: `Project Settings -> Capabilities -> KeyChain Sharing -> ON`
+## License
 
-1. Don't forget to configure your Firebase App Database using [Firebase console](https://console.firebase.google.com).<br>
-Database should contain appropriate read/write permissions and folders (`objc_demo-chat` and `swift_demo-chat` respectively)
-
-1. In Order to use `Phone Auth` provider you should [Configure Push Notifications](#configure-apple-push-notifications)
-
-#### Configure Apple Push Notifications
-
-##### Enable silent push notifications in Xcode
-
-  * `Push Notification` - Under `Capabilities` tab in your app target choose `Push Notifications` and put the switch to the `On` position.
-  * `Background Mode` - Under `Capabilities` tab in your app target choose `Background Modes` put the switch to the `On` position.  In the list of available modes select `Background fetch` and `Remote notifications` (If available).
-
-##### Upload APNS Certificate to Firebase
-
-1. Create your `Provisioning APNS SSL Certificates` by following the steps on the following link.
-https://firebase.google.com/docs/cloud-messaging/ios/certs
-
-1. Upload your `APNS Certificate` to Firebase:
-    + Inside your project in the Firebase console, select the gear icon, select `Project Settings`, and then select the `Cloud Messaging` tab.
-    + Select the `Upload Certificate` button for your development certificate, your production certificate, or both. At least one is required.
-    + For each certificate, select the `.p12 file`, and provide the password, if any. Make sure the `bundle ID` for this certificate matches the `bundle ID` of your app. Select `Save`.
-
-## Contributing to FirebaseUI
-
-### Contributor License Agreements
-
-We'd love to accept your sample apps and patches! Before we can take them, we
-have to jump a couple of legal hurdles.
-
-Please fill out either the individual or corporate Contributor License Agreement
-(CLA).
-
-  * If you are an individual writing original source code and you're sure you
-    own the intellectual property, then you'll need to sign an [individual CLA]
-    (https://developers.google.com/open-source/cla/individual).
-  * If you work for a company that wants to allow you to contribute your work,
-    then you'll need to sign a [corporate CLA]
-    (https://developers.google.com/open-source/cla/corporate).
-
-Follow either of the two links above to access the appropriate CLA and
-instructions for how to sign and return it. Once we receive it, we'll be able to
-accept your pull requests.
-
-### Contribution Process
-
-1. Submit an issue describing your proposed change to the repo in question.
-1. The repo owner will respond to your issue promptly.
-1. If your proposed change is accepted, and you haven't already done so, sign a
-   Contributor License Agreement (see details above).
-1. Fork the desired repo, develop and test your code changes.
-1. Ensure that your code adheres to the existing style of the library to which
-   you are contributing.
-1. Ensure that your code has an appropriate set of unit tests which all pass.
-1. Submit a pull request
+FirebaseUI is released under the Apache License 2.0. See [LICENSE](LICENSE).
