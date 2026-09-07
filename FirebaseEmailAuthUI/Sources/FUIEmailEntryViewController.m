@@ -144,76 +144,35 @@ static NSString *const kNextButtonAccessibilityID = @"NextButtonAccessibilityID"
     return;
   }
 
-  [self incrementActivity];
+  // Email enumeration protection means the backend no longer reveals whether an account exists
+  // or which provider it uses, so route on configuration alone. An existing account that lands on
+  // the sign-up screen is redirected to sign-in when the backend reports the email as in use.
+  if ([emailAuth.signInMethod isEqualToString:@"emailLink"]) {
+    [self sendSignInLinkToEmail:emailText];
+    return;
+  }
 
-  [self.auth fetchSignInMethodsForEmail:emailText
-                             completion:^(NSArray<NSString *> *_Nullable providers,
-                                          NSError *_Nullable error) {
-    [self decrementActivity];
-
-    if (error) {
-      if (error.code == FIRAuthErrorCodeInvalidEmail) {
-        [self showAlertWithMessage:FUILocalizedString(kStr_InvalidEmailError)];
-      } else {
-        [self dismissNavigationControllerAnimated:YES completion:^{
-          [self.authUI invokeResultCallbackWithAuthDataResult:nil URL:nil error:error];
-        }];
-      }
-      return;
-    }
-
-    id<FUIAuthProvider> provider = [self bestProviderFromProviderIDs:providers];
-    if (provider && ![provider.providerID isEqualToString:@"password"]) {
-      NSString *email = emailText;
-      [[self class] showSignInAlertWithEmail:email
-                                    provider:provider
-                    presentingViewController:self
-                               signinHandler:^{
-        [self signInWithProvider:provider email:email];
-      }
-                               cancelHandler:^{
-        [self.authUI signOutWithError:nil];
-      }];
-    } else if ([providers containsObject:@"password"]) {
-      UIViewController *controller;
-      if ([delegate respondsToSelector:@selector(passwordSignInViewControllerForAuthUI:email:)]) {
-        controller = [delegate passwordSignInViewControllerForAuthUI:self.authUI
-                                                               email:emailText];
-      } else {
-        controller = [[FUIPasswordSignInViewController alloc] initWithAuthUI:self.authUI
-                                                                       email:emailText];
-      }
-      [self pushViewController:controller];
-
-      // TODO: Use API to get string when Firebase 11 is the minimum.
-    } else if ([emailAuth.signInMethod isEqualToString:@"emailLink"]) {
-      [self sendSignInLinkToEmail:emailText];
+  UIViewController *controller;
+  if (emailAuth.allowNewEmailAccounts) {
+    if ([delegate respondsToSelector:@selector(passwordSignUpViewControllerForAuthUI:email:requireDisplayName:)]) {
+      controller = [delegate passwordSignUpViewControllerForAuthUI:self.authUI
+                                                             email:emailText
+                                                requireDisplayName:emailAuth.requireDisplayName];
     } else {
-      if (providers.count) {
-        // There's some unsupported providers, surface the error to the user.
-        [self showAlertWithMessage:FUILocalizedString(kStr_CannotAuthenticateError)];
-      } else {
-        // New user.
-        UIViewController *controller;
-        if (emailAuth.allowNewEmailAccounts) {
-          if ([delegate respondsToSelector:@selector(passwordSignUpViewControllerForAuthUI:email:requireDisplayName:)]) {
-            controller = [delegate passwordSignUpViewControllerForAuthUI:self.authUI
-                                                                   email:emailText
-                                                      requireDisplayName:emailAuth.requireDisplayName];
-          } else {
-            controller = [[FUIPasswordSignUpViewController alloc] initWithAuthUI:self.authUI
-                                                                           email:emailText
-                                                              requireDisplayName:emailAuth.requireDisplayName];
-          }
-        } else {
-          [self showAlertWithMessage:FUILocalizedString(kStr_UserNotFoundError)];
-        }
-        if (controller != nil) {
-          [self pushViewController:controller];
-        }
-      }
+      controller = [[FUIPasswordSignUpViewController alloc] initWithAuthUI:self.authUI
+                                                                     email:emailText
+                                                        requireDisplayName:emailAuth.requireDisplayName];
     }
-  }];
+  } else {
+    if ([delegate respondsToSelector:@selector(passwordSignInViewControllerForAuthUI:email:)]) {
+      controller = [delegate passwordSignInViewControllerForAuthUI:self.authUI
+                                                             email:emailText];
+    } else {
+      controller = [[FUIPasswordSignInViewController alloc] initWithAuthUI:self.authUI
+                                                                     email:emailText];
+    }
+  }
+  [self pushViewController:controller];
 }
 
 - (void)sendSignInLinkToEmail:(NSString*)email {
@@ -304,18 +263,6 @@ static NSString *const kNextButtonAccessibilityID = @"NextButtonAccessibilityID"
   return cell;
 }
 
-- (nullable id<FUIAuthProvider>)bestProviderFromProviderIDs:(NSArray<NSString *> *)providerIDs {
-  NSArray<id<FUIAuthProvider>> *providers = self.authUI.providers;
-  for (NSString *providerID in providerIDs) {
-    for (id<FUIAuthProvider> provider in providers) {
-      if ([providerID isEqual:provider.providerID]) {
-        return provider;
-      }
-    }
-  }
-  return nil;
-}
-
 #pragma mark - UITextFieldDelegate
 
 - (BOOL)textFieldShouldReturn:(UITextField *)textField {
@@ -325,52 +272,4 @@ static NSString *const kNextButtonAccessibilityID = @"NextButtonAccessibilityID"
   return NO;
 }
 
-#pragma mark - Utilities
-
-/** @fn signInWithProvider:email:
-    @brief Actually kicks off sign in with the provider.
-    @param provider The identity provider to sign in with.
-    @param email The email address of the user.
- */
-- (void)signInWithProvider:(id<FUIAuthProvider>)provider email:(NSString *)email {
-  [self incrementActivity];
-
-  // Sign out first to make sure sign in starts with a clean state.
-  [provider signOut];
-  [provider signInWithDefaultValue:email
-          presentingViewController:self
-                        completion:^(FIRAuthCredential *_Nullable credential,
-                                     NSError *_Nullable error,
-                                     _Nullable FIRAuthResultCallback result,
-                                     NSDictionary *_Nullable userInfo) {
-    if (error) {
-      [self decrementActivity];
-      if (result) {
-        result(nil, error);
-      }
-
-      [self dismissNavigationControllerAnimated:YES completion:^{
-        [self.authUI invokeResultCallbackWithAuthDataResult:nil URL:nil error:error];
-      }];
-      return;
-    }
-
-    [self.auth signInWithCredential:credential
-                         completion:^(FIRAuthDataResult *_Nullable authResult,
-                                      NSError *_Nullable error) {
-      [self decrementActivity];
-      if (result) {
-        result(authResult.user, error);
-      }
-
-      if (error) {
-        [self.authUI invokeResultCallbackWithAuthDataResult:nil URL:nil error:error];
-      } else {
-        [self dismissNavigationControllerAnimated:YES completion:^{
-          [self.authUI invokeResultCallbackWithAuthDataResult:authResult URL:nil error:error];
-        }];
-      }
-    }];
- }];
-}
 @end

@@ -114,6 +114,9 @@ NSString *const kStr_PlaceholderEnterPassword = @"PlaceholderEnterPassword";
 NSString *const kStr_PlaceholderChosePassword = @"PlaceholderChosePassword";
 NSString *const kStr_PlaceholderNewPassword = @"PlaceholderNewPassword";
 NSString *const kStr_ForgotPasswordTitle = @"ForgotPasswordTitle";
+NSString *const kStr_UpdateEmailVerificationSentTitle = @"UpdateEmailVerificationSentTitle";
+NSString *const kStr_UpdateEmailVerificationSentMessage = @"UpdateEmailVerificationSentMessage";
+NSString *const kStr_ChooseExistingProviderMessage = @"ChooseExistingProviderMessage";
 
 /** @var kKeyNotFound
     @brief The value returned if the key is not found in the table.

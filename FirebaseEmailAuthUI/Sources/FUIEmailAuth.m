@@ -298,10 +298,21 @@ static NSString *const kEmailLinkSignInLinkingCredentialKey = @"FIRAuthEmailLink
                                                 objectForKey:kEmailLinkSignInLinkingCredentialKey];
     FIRAuthCredential *unverifiedProviderCredential = nil;
     if (unverifiedProviderCredentialData) {
+      NSError *unarchiveError = nil;
       unverifiedProviderCredential =
           [NSKeyedUnarchiver unarchivedObjectOfClass:[FIRAuthCredential class]
                                             fromData:unverifiedProviderCredentialData
-                                               error:NULL];
+                                               error:&unarchiveError];
+      if (unarchiveError) {
+        NSLog(@"FUIEmailAuth unable to restore the credential to link: %@", unarchiveError);
+      }
+    }
+    if (!unverifiedProviderCredential) {
+      // Without the stored credential there is nothing to link, so fall back to a plain
+      // email link sign-in rather than passing nil into linkWithCredential:.
+      [GULUserDefaults.standardUserDefaults removeObjectForKey:kEmailLinkSignInLinkingCredentialKey];
+      [self handleEmaiLinkSignIn:email];
+      return;
     }
 
     FIRAuthCredential *emailLinkCredential =
@@ -516,6 +527,53 @@ static NSString *const kEmailLinkSignInLinkingCredentialKey = @"FIRAuthEmailLink
   }
 }
 
+/** @fn chooseExistingProviderForEmail:candidates:presentingViewController:completion:
+    @brief Asks the user which of the app's providers their existing account uses. Email
+        enumeration protection means the backend no longer reveals this, so the user has to tell us.
+        A single candidate is returned without prompting; no candidates shows an error.
+    @param email The email address of the existing account.
+    @param candidates The providers the user may pick from.
+    @param presentingViewController The controller to present the chooser on.
+    @param completion Invoked with the chosen provider, or nil if the user cancelled or there was
+        nothing to choose from.
+ */
++ (void)chooseExistingProviderForEmail:(NSString *)email
+                            candidates:(NSArray<id<FUIAuthProvider>> *)candidates
+              presentingViewController:(nullable UIViewController *)presentingViewController
+                            completion:(void (^)(id<FUIAuthProvider> _Nullable provider))completion {
+  if (candidates.count == 0) {
+    [FUIAuthBaseViewController showAlertWithMessage:FUILocalizedString(kStr_CannotAuthenticateError)
+                           presentingViewController:presentingViewController];
+    completion(nil);
+    return;
+  }
+  if (candidates.count == 1) {
+    completion(candidates.firstObject);
+    return;
+  }
+
+  NSString *message =
+      [NSString stringWithFormat:FUILocalizedString(kStr_ChooseExistingProviderMessage), email];
+  UIAlertController *alert =
+      [UIAlertController alertControllerWithTitle:FUILocalizedString(kStr_ExistingAccountTitle)
+                                          message:message
+                                   preferredStyle:UIAlertControllerStyleAlert];
+  for (id<FUIAuthProvider> provider in candidates) {
+    [alert addAction:[UIAlertAction actionWithTitle:provider.signInLabel
+                                              style:UIAlertActionStyleDefault
+                                            handler:^(UIAlertAction *action) {
+      completion(provider);
+    }]];
+  }
+  [alert addAction:[UIAlertAction actionWithTitle:FUILocalizedString(kStr_Cancel)
+                                            style:UIAlertActionStyleCancel
+                                          handler:^(UIAlertAction *action) {
+    completion(nil);
+  }]];
+  UIViewController *presenter = presentingViewController ?: [self keyWindowRootViewController];
+  [presenter presentViewController:alert animated:YES completion:nil];
+}
+
 #pragma mark - FUIEmailAuthProvider
 
 - (void)signInWithEmailHint:(NSString *)emailHint
@@ -533,23 +591,22 @@ static NSString *const kEmailLinkSignInLinkingCredentialKey = @"FIRAuthEmailLink
   // currently signed in user on the default auth instance.
   FIRAuth *tempAuth = [FIRAuth authWithApp:tempApp];
 
-  [self.authUI.auth fetchSignInMethodsForEmail:emailHint
-                                    completion:^(NSArray<NSString *> *_Nullable providers,
-                                                 NSError *_Nullable error) {
-    if (error) {
-      if (completion) {
-        completion(nil, error, nil);
-      }
-      return;
+  // Set of providers which can be auto-linked.
+  NSSet<NSString *> *supportedProviders =
+      [NSSet setWithObjects:@"google.com", @"facebook.com", @"password", nil];
+  NSMutableArray<id<FUIAuthProvider>> *candidates = [NSMutableArray array];
+  for (id<FUIAuthProvider> provider in self.authUI.providers) {
+    if (provider.providerID && [supportedProviders containsObject:provider.providerID]) {
+      [candidates addObject:provider];
     }
-    NSString *existingFederatedProviderID = [self authProviderFromProviders:providers];
-    // Set of providers which can be auto-linked.
-    NSSet *supportedProviders =
-        [NSSet setWithObjects:@"google.com",
-                              @"facebook.com",
-                              @"password",
-                              nil];
-    if ([supportedProviders containsObject:existingFederatedProviderID]) {
+  }
+
+  [FUIEmailAuth chooseExistingProviderForEmail:emailHint
+                                    candidates:candidates
+                      presentingViewController:presentingViewController
+                                    completion:^(id<FUIAuthProvider> _Nullable chosenProvider) {
+    NSString *existingFederatedProviderID = chosenProvider.providerID;
+    if (chosenProvider) {
       if ([existingFederatedProviderID isEqualToString:@"password"]) {
 
         [FUIAuthBaseViewController showSignInAlertWithEmail:emailHint
@@ -574,14 +631,7 @@ static NSString *const kEmailLinkSignInLinkingCredentialKey = @"FIRAuthEmailLink
           }
         }];
       } else { // Federated sign-in case.
-        id<FUIAuthProvider> authProviderUI;
-        // Retrieve the FUIAuthProvider instance from FUIAuth for the existing provider ID.
-        for (id<FUIAuthProvider> provider in self.authUI.providers) {
-          if ([provider.providerID isEqualToString:existingFederatedProviderID]) {
-            authProviderUI = provider;
-            break;
-          }
-        }
+        id<FUIAuthProvider> authProviderUI = chosenProvider;
 
         [FUIAuthBaseViewController showSignInAlertWithEmail:emailHint
                                                    provider:authProviderUI
@@ -646,6 +696,8 @@ static NSString *const kEmailLinkSignInLinkingCredentialKey = @"FIRAuthEmailLink
           }
         }];
       }
+    } else if (completion) {
+      completion(nil, originalError, nil);
     }
   }];
 }
@@ -655,34 +707,30 @@ static NSString *const kEmailLinkSignInLinkingCredentialKey = @"FIRAuthEmailLink
             presentingViewController:(UIViewController *)presentingViewController
                         signInResult:(_Nullable FIRAuthResultCallback)result {
   id<FUIAuthDelegate> delegate = self.authUI.delegate;
-  [self.authUI.auth fetchSignInMethodsForEmail:email
-                                    completion:^(NSArray<NSString *> *_Nullable providers,
-                                                 NSError *_Nullable error) {
+  // The existing account can use any provider this app offers except the one that just
+  // failed to sign in; email enumeration protection hides which one it actually is.
+  NSMutableArray<id<FUIAuthProvider>> *candidates = [NSMutableArray array];
+  for (id<FUIAuthProvider> provider in self.authUI.providers) {
+    if (provider.providerID && ![provider.providerID isEqualToString:newCredential.provider]) {
+      [candidates addObject:provider];
+    }
+  }
+
+  [FUIEmailAuth chooseExistingProviderForEmail:email
+                                    candidates:candidates
+                      presentingViewController:presentingViewController
+                                    completion:^(id<FUIAuthProvider> _Nullable chosenProvider) {
     if (result) {
-      result(nil, error);
+      result(nil, nil);
+    }
+    if (!chosenProvider) {
+      [self.authUI signOutWithError:nil];
+      return;
     }
 
-    if (error) {
-      if (error.code == FIRAuthErrorCodeInvalidEmail) {
-        // This should never happen because the email address comes from the backend.
-        [FUIAuthBaseViewController showAlertWithMessage:FUILocalizedString(kStr_InvalidEmailError)
-                               presentingViewController:presentingViewController];
-      } else {
-        [presentingViewController dismissViewControllerAnimated:YES completion:^{
-          [self.authUI invokeResultCallbackWithAuthDataResult:nil URL:nil error:error];
-        }];
-      }
-      return;
-    }
-    if (!providers.count) {
-      // This should never happen because the user must be registered.
-      [FUIAuthBaseViewController showAlertWithMessage:
-          FUILocalizedString(kStr_CannotAuthenticateError)
-                             presentingViewController:presentingViewController];
-      return;
-    }
-    NSString *bestProviderID = providers[0];
-    if ([bestProviderID isEqual:@"password"]) {
+    NSString *bestProviderID = chosenProvider.providerID;
+    BOOL usesEmailLink = [self.signInMethod isEqualToString:@"emailLink"];
+    if ([bestProviderID isEqual:@"password"] && !usesEmailLink) {
       // Password verification.
       UIViewController *passwordController;
       if ([delegate respondsToSelector:
@@ -705,7 +753,7 @@ static NSString *const kEmailLinkSignInLinkingCredentialKey = @"FIRAuthEmailLink
       return;
     }
 
-    if ([bestProviderID isEqual:@"emailLink"]) {
+    if ([bestProviderID isEqual:@"password"] && usesEmailLink) {
       NSString *providerName;
       if ([newCredential.provider isEqualToString:@"facebook.com"]) {
         providerName = @"Facebook";
@@ -725,10 +773,18 @@ static NSString *const kEmailLinkSignInLinkingCredentialKey = @"FIRAuthEmailLink
         [self generateURLParametersAndLocalCache:email
                                  linkingProvider:newCredential.provider];
 
+        NSError *archiveError = nil;
         NSData *data = [NSKeyedArchiver archivedDataWithRootObject:newCredential
                                              requiringSecureCoding:YES
-                                                             error:NULL];
-        [GULUserDefaults.standardUserDefaults setObject:data forKey:kEmailLinkSignInLinkingCredentialKey];
+                                                             error:&archiveError];
+        if (data) {
+          [GULUserDefaults.standardUserDefaults setObject:data
+                                                   forKey:kEmailLinkSignInLinkingCredentialKey];
+        } else {
+          NSLog(@"FUIEmailAuth unable to store the credential to link: %@", archiveError);
+          [GULUserDefaults.standardUserDefaults
+              removeObjectForKey:kEmailLinkSignInLinkingCredentialKey];
+        }
 
         void (^completion)(NSError * _Nullable error) = ^(NSError * _Nullable error){
           if (error) {
@@ -759,14 +815,7 @@ static NSString *const kEmailLinkSignInLinkingCredentialKey = @"FIRAuthEmailLink
       return;
     }
 
-    id<FUIAuthProvider> bestProvider = [self.authUI providerWithID:bestProviderID];
-    if (!bestProvider) {
-      // Unsupported provider.
-      [FUIAuthBaseViewController showAlertWithMessage:
-          FUILocalizedString(kStr_CannotAuthenticateError)
-                             presentingViewController:presentingViewController];
-      return;
-    }
+    id<FUIAuthProvider> bestProvider = chosenProvider;
 
     [FUIAuthBaseViewController showSignInAlertWithEmail:email
                                                provider:bestProvider
@@ -865,19 +914,6 @@ static NSString *const kEmailLinkSignInLinkingCredentialKey = @"FIRAuthEmailLink
 
   urlComponents.queryItems = urlQuertItems;
   self.actionCodeSettings.URL = urlComponents.URL;
-}
-
-- (nullable NSString *)authProviderFromProviders:(NSArray <NSString *> *) providers {
-  NSSet *providerSet =
-  [NSSet setWithArray:@[ @"facebook.com",
-                         @"google.com",
-                         @"password" ]];
-  for (NSString *provider in providers) {
-    if ( [providerSet containsObject:provider]) {
-      return provider;
-    }
-  }
-  return nil;
 }
 
 @end

@@ -83,9 +83,25 @@ NS_ASSUME_NONNULL_BEGIN
                                                                   completion:^(NSError *_Nullable error) {
       [self.delegate decrementActivity];
       [self finishOperationWithError:error];
-      if (!error) {
-        [self.delegate presentBaseController];
+      if (error) {
+        return;
       }
+      // The address only changes once the user follows the verification link, so tell them
+      // to check their inbox rather than silently returning to the settings screen.
+      NSString *message =
+          [NSString stringWithFormat:FUILocalizedString(kStr_UpdateEmailVerificationSentMessage),
+                                     email];
+      UIAlertController *alert =
+          [UIAlertController alertControllerWithTitle:
+              FUILocalizedString(kStr_UpdateEmailVerificationSentTitle)
+                                              message:message
+                                       preferredStyle:UIAlertControllerStyleAlert];
+      [alert addAction:[UIAlertAction actionWithTitle:FUILocalizedString(kStr_OK)
+                                                style:UIAlertActionStyleDefault
+                                              handler:^(UIAlertAction *action) {
+        [self.delegate presentBaseController];
+      }]];
+      [self.delegate presentViewController:alert];
     }];
   }
 }

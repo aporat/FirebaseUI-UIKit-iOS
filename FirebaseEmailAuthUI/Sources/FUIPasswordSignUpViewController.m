@@ -21,6 +21,7 @@
 
 #import "FirebaseEmailAuthUI/Sources/Public/FirebaseEmailAuthUI/FUIEmailAuth.h"
 #import "FirebaseEmailAuthUI/Sources/FUIEmailAuthStrings.h"
+#import "FirebaseEmailAuthUI/Sources/Public/FirebaseEmailAuthUI/FUIPasswordSignInViewController.h"
 
 /** @var kCellReuseIdentifier
     @brief The reuse identifier for table view cell.
@@ -167,6 +168,12 @@ static const CGFloat kTextFieldRightViewSize = 36.0f;
                            NSError * _Nullable error) {
       if (error) {
         [self decrementActivity];
+        if (error.code == FIRAuthErrorCodeEmailAlreadyInUse) {
+          // Signing in would drop the anonymous user, so let the sign-in screen handle the
+          // merge conflict instead.
+          [self offerSignInForExistingAccountWithEmail:email];
+          return;
+        }
         [self finishSignUpWithAuthDataResult:nil error:error];
         return;
       }
@@ -188,6 +195,13 @@ static const CGFloat kTextFieldRightViewSize = 36.0f;
                         completion:^(FIRAuthDataResult *_Nullable authDataResult,
                                      NSError *_Nullable error) {
       if (error) {
+        if (error.code == FIRAuthErrorCodeEmailAlreadyInUse) {
+          // With email enumeration protection the email-first step cannot tell existing users
+          // apart from new ones, so an existing account may land here. Try the password they
+          // just typed before sending them to the sign-in screen.
+          [self signInExistingAccountWithEmail:email password:password];
+          return;
+        }
         [self decrementActivity];
 
         [self finishSignUpWithAuthDataResult:nil error:error];
@@ -231,6 +245,52 @@ static const CGFloat kTextFieldRightViewSize = 36.0f;
   [self dismissNavigationControllerAnimated:YES completion:^() {
     [self.authUI invokeResultCallbackWithAuthDataResult:authDataResult URL:nil error:error];
   }];
+}
+
+/** @fn signInExistingAccountWithEmail:password:
+    @brief Signs in an existing password account using the credentials entered on the sign-up
+        screen. Expects the activity indicator to already be incremented.
+    @param email The email address that is already in use.
+    @param password The password the user entered.
+ */
+- (void)signInExistingAccountWithEmail:(NSString *)email password:(NSString *)password {
+  FIRAuthCredential *credential =
+      [FIREmailAuthProvider credentialWithEmail:email password:password];
+  [self.auth signInWithCredential:credential
+                       completion:^(FIRAuthDataResult *_Nullable authResult,
+                                    NSError *_Nullable error) {
+    [self decrementActivity];
+    if (error) {
+      [self offerSignInForExistingAccountWithEmail:email];
+      return;
+    }
+    [self finishSignUpWithAuthDataResult:authResult error:nil];
+  }];
+}
+
+/** @fn offerSignInForExistingAccountWithEmail:
+    @brief Tells the user the email is already registered and offers to take them to the
+        sign-in screen with the email prefilled.
+    @param email The email address that is already in use.
+ */
+- (void)offerSignInForExistingAccountWithEmail:(NSString *)email {
+  [FUIAuthBaseViewController showAlertWithTitle:FUILocalizedString(kStr_ExistingAccountTitle)
+                                        message:FUILocalizedString(kStr_EmailAlreadyInUseError)
+                                    actionTitle:FUILocalizedString(kStr_SignInTitle)
+                                  actionHandler:^{
+    id<FUIAuthDelegate> delegate = self.authUI.delegate;
+    UIViewController *controller;
+    if ([delegate respondsToSelector:@selector(passwordSignInViewControllerForAuthUI:email:)]) {
+      controller = [delegate passwordSignInViewControllerForAuthUI:self.authUI email:email];
+    } else {
+      controller = [[FUIPasswordSignInViewController alloc] initWithAuthUI:self.authUI
+                                                                     email:email];
+    }
+    [self pushViewController:controller];
+  }
+                                   dismissTitle:FUILocalizedString(kStr_Cancel)
+                                 dismissHandler:nil
+                       presentingViewController:self];
 }
 
 - (void)textFieldDidChange {

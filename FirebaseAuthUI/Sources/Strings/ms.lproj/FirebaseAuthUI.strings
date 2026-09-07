@@ -267,3 +267,12 @@
 
 /* Message displayed after the email of sign-in link is sent. */
 "SignInEmailSent" = "E-mel log masuk Dihantar";
+
+/* Alert title shown after a verification email for an email address change is sent. */
+"UpdateEmailVerificationSentTitle" = "Check your email";
+
+/* Alert message shown after a verification email for an email address change is sent. The placeholder is the new email address. */
+"UpdateEmailVerificationSentMessage" = "Follow the instructions sent to %@ to change your email address.";
+
+/* Alert message asking the user which sign-in method their existing account uses. The placeholder is the email address. */
+"ChooseExistingProviderMessage" = "Choose the sign-in method you used previously for %@ to continue.";

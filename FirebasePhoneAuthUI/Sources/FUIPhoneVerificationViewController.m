@@ -303,7 +303,7 @@ static NSString *const kLinkPlaceholderPattern = @"\\[([^\\]]+)\\]";
 
 - (void)keyboardWasShown:(NSNotification*)aNotification {
   NSDictionary* info = [aNotification userInfo];
-  CGSize kbSize = [[info objectForKey:UIKeyboardFrameBeginUserInfoKey] CGRectValue].size;
+  CGSize kbSize = [[info objectForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue].size;
   UIEdgeInsets contentInsets = UIEdgeInsetsMake([self topOffset], 0.0, kbSize.height, 0.0);
 
   NSTimeInterval duration = [info[UIKeyboardAnimationDurationUserInfoKey] doubleValue];
