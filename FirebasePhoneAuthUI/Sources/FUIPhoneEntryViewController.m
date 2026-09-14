@@ -147,6 +147,11 @@ static NSString *const kNextButtonAccessibilityID = @"NextButtonAccessibilityID"
   [self enableDynamicCellHeightForTableView:_tableView];
 }
 
+- (void)viewDidAppear:(BOOL)animated {
+  [super viewDidAppear:animated];
+  [_phoneNumberField becomeFirstResponder];
+}
+
 - (void)viewWillAppear:(BOOL)animated {
   [super viewWillAppear:animated];
 
@@ -287,7 +292,6 @@ static NSString *const kNextButtonAccessibilityID = @"NextButtonAccessibilityID"
     _phoneNumberField.returnKeyType = UIReturnKeyNext;
     _phoneNumberField.keyboardType = UIKeyboardTypeNumberPad;
     _phoneNumberField.textContentType = UITextContentTypeTelephoneNumber;
-    [_phoneNumberField becomeFirstResponder];
     if (_phoneNumber) {
       _phoneNumberField.text = _phoneNumber.rawPhoneNumber;
     } else {
