@@ -26,6 +26,9 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+@interface FUIPhoneAuth () <UIAdaptivePresentationControllerDelegate>
+@end
+
 @implementation FUIPhoneAuth {
   /** The @c FUIAuth instance of the application. */
   FUIAuth *_authUI;
@@ -35,6 +38,9 @@ NS_ASSUME_NONNULL_BEGIN
   
   /** Available country codes For the authUI to use. */
   FUICountryCodes *_countryCodes;
+
+  /** YES while a credential handed back through the pending callback is being signed in. */
+  BOOL _isSigningInWithCredential;
 }
 
 + (NSBundle *)bundle {
@@ -168,6 +174,10 @@ NS_ASSUME_NONNULL_BEGIN
                                                                         countryCodes:_countryCodes];
   UINavigationController *navigationController =
       [[UINavigationController alloc] initWithRootViewController:controller];
+  _isSigningInWithCredential = NO;
+  // Report an interactive (swipe down) dismissal of the sheet as a cancellation. The navigation
+  // controller is new, so this doesn't replace a delegate set by anyone else.
+  navigationController.presentationController.delegate = self;
   [presentingViewController presentViewController:navigationController animated:YES completion:nil];
 }
 
@@ -183,8 +193,12 @@ NS_ASSUME_NONNULL_BEGIN
                          error:(nullable NSError *)error
                         result:(nullable FIRAuthResultCallback)result {
   FUIAuthProviderSignInCompletionBlock callback = _pendingSignInCallback;
+  if (callback && credential) {
+    _isSigningInWithCredential = YES;
+  }
 
   FIRAuthResultCallback resultAuthCallback = ^(FIRUser *_Nullable user, NSError *_Nullable error) {
+    self->_isSigningInWithCredential = NO;
     if (!error) {
       self->_pendingSignInCallback = nil;
     }
@@ -194,6 +208,25 @@ NS_ASSUME_NONNULL_BEGIN
   };
   if (callback) {
     callback(credential, error, resultAuthCallback, nil);
+  }
+}
+
+#pragma mark - UIAdaptivePresentationControllerDelegate
+
+- (BOOL)presentationControllerShouldDismiss:(UIPresentationController *)presentationController {
+  // Keep the sheet up while a verification code is being checked, so the in-flight result and a
+  // cancellation can't both be reported.
+  return !_isSigningInWithCredential;
+}
+
+- (void)presentationControllerDidDismiss:(UIPresentationController *)presentationController {
+  // Only called for interactive dismissals; the flow's own dismissals after success or cancel
+  // don't get here. The pending callback is cleared on success, so a finished flow reports nothing.
+  FUIAuthProviderSignInCompletionBlock callback = _pendingSignInCallback;
+  _pendingSignInCallback = nil;
+  _isSigningInWithCredential = NO;
+  if (callback) {
+    callback(nil, [FUIAuthErrorUtils userCancelledSignInError], nil, nil);
   }
 }
 

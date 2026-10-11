@@ -50,7 +50,7 @@ static NSString *const kEmailLinkSignInEmailKey = @"FIRAuthEmailLinkSignInEmail"
  */
 static NSString *const kEmailLinkSignInLinkingCredentialKey = @"FIRAuthEmailLinkSignInLinkingCredential";
 
-@interface FUIEmailAuth () <FUIEmailAuthProvider>
+@interface FUIEmailAuth () <FUIEmailAuthProvider, UIAdaptivePresentationControllerDelegate>
 /** @property authUI.
     @brief The @c FUIAuth instance of the application.
  */
@@ -213,6 +213,9 @@ static NSString *const kEmailLinkSignInLinkingCredentialKey = @"FIRAuthEmailLink
   } else {
     UINavigationController *navigationController =
         [[UINavigationController alloc] initWithRootViewController:controller];
+    // Report an interactive (swipe down) dismissal of the sheet as a cancellation. The navigation
+    // controller is new, so this doesn't replace a delegate set by anyone else.
+    navigationController.presentationController.delegate = self;
     [presentingViewController presentViewController:navigationController
                                            animated:YES
                                          completion:nil];
@@ -525,6 +528,16 @@ static NSString *const kEmailLinkSignInLinkingCredentialKey = @"FIRAuthEmailLink
   if (callback) {
     callback(credential, error, result, nil);
   }
+}
+
+#pragma mark - UIAdaptivePresentationControllerDelegate
+
+- (void)presentationControllerDidDismiss:(UIPresentationController *)presentationController {
+  // Only called for interactive dismissals. callbackWithCredential:error:result: clears the
+  // pending callback, so if the flow already handed back a credential nothing is reported here.
+  [self callbackWithCredential:nil
+                         error:[FUIAuthErrorUtils userCancelledSignInError]
+                        result:nil];
 }
 
 /** @fn chooseExistingProviderForEmail:candidates:presentingViewController:completion:
