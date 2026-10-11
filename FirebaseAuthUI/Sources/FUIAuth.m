@@ -191,6 +191,24 @@ static NSString *const kFirebaseAuthUIFrameworkMarker = @"FirebaseUI-iOS";
       return;
     }
 
+    // Every remaining path signs in or links with the credential, so a provider that reported
+    // neither a credential nor an error is a failure, not something to hand to Firebase.
+    if (!credential) {
+      NSMutableDictionary *errorUserInfo = [NSMutableDictionary dictionary];
+      errorUserInfo[NSLocalizedDescriptionKey] = @"The sign-in provider did not return a credential.";
+      if (providerUI.providerID) {
+        errorUserInfo[FUIAuthErrorUserInfoProviderIDKey] = providerUI.providerID;
+      }
+      NSError *missingCredentialError =
+          [FUIAuthErrorUtils errorWithCode:FUIAuthErrorCodeProviderError
+                                  userInfo:[errorUserInfo copy]];
+      [self invokeResultCallbackWithAuthDataResult:nil URL:nil error:missingCredentialError];
+      if (result) {
+        result(nil, missingCredentialError);
+      }
+      return;
+    }
+
     // Check for the presence of an anonymous user and whether automatic upgrade is enabled.
     if (self.auth.currentUser.isAnonymous && self.shouldAutoUpgradeAnonymousUsers) {
       [self autoUpgradeAccountWithProviderUI:providerUI

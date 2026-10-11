@@ -355,29 +355,58 @@ NS_ASSUME_NONNULL_BEGIN
 #pragma mark - ASAuthorizationControllerDelegate
 
 - (void)authorizationController:(ASAuthorizationController *)controller didCompleteWithAuthorization:(ASAuthorization *)authorization {
-  ASAuthorizationAppleIDCredential *appleIDCredential = authorization.credential;
-  NSData *rawIdentityToken = appleIDCredential.identityToken;
-  if (rawIdentityToken == nil) {
+  // Take the completion so it is invoked exactly once for this sign-in attempt.
+  FUIAuthProviderSignInCompletionBlock completion = _providerSignInCompletion;
+  _providerSignInCompletion = nil;
+  NSString *rawNonce = self.currentNonce;
+  self.currentNonce = nil;
+
+  NSString *idToken = nil;
+  if ([authorization.credential isKindOfClass:[ASAuthorizationAppleIDCredential class]]) {
+    ASAuthorizationAppleIDCredential *appleIDCredential =
+        (ASAuthorizationAppleIDCredential *)authorization.credential;
+    NSData *rawIdentityToken = appleIDCredential.identityToken;
+    if (rawIdentityToken != nil) {
+      idToken = [[NSString alloc] initWithData:rawIdentityToken encoding:NSUTF8StringEncoding];
+    }
+  }
+
+  if (idToken.length == 0 || rawNonce.length == 0) {
     // It's pretty awful to not have an error when login is unsuccessful, but Apple's docs
     // don't provide any useful information here.
     // https://developer.apple.com/documentation/authenticationservices/asauthorizationappleidcredential
-    NSLog(@"Sign in with Apple completed with authorization, but no jwt: %@", authorization);
-    _providerSignInCompletion(nil, nil, nil, nil);
+    NSLog(@"Sign in with Apple completed with authorization, but no usable identity token.");
+    if (completion) {
+      NSError *underlyingError =
+          [NSError errorWithDomain:ASAuthorizationErrorDomain
+                              code:ASAuthorizationErrorInvalidResponse
+                          userInfo:@{
+            NSLocalizedDescriptionKey : @"Sign in with Apple did not return an identity token."
+          }];
+      NSError *error = [FUIAuthErrorUtils providerErrorWithUnderlyingError:underlyingError
+                                                                providerID:@"apple.com"];
+      completion(nil, error, nil, nil);
+    }
+    return;
   }
-  NSString *idToken = [[NSString alloc] initWithData:appleIDCredential.identityToken encoding:NSUTF8StringEncoding];
-  NSString *rawNonce = self.currentNonce;
+
   FIROAuthCredential *credential = [FIROAuthProvider credentialWithProviderID:@"apple.com"
                                                                       IDToken:idToken
                                                                      rawNonce:rawNonce];
-  _providerSignInCompletion(credential, nil, nil, nil);
+  if (completion) {
+    completion(credential, nil, nil, nil);
+  }
 }
 
 - (void)authorizationController:(ASAuthorizationController *)controller didCompleteWithError:(NSError *)error {
-    NSLog(@"%@", error.description);
-    // canceled/failed/invalid/Nothandled/Unknown
-    if (_providerSignInCompletion) {
-        _providerSignInCompletion(nil, error, nil, nil);
-    }
+  NSLog(@"%@", error.description);
+  // canceled/failed/invalid/Nothandled/Unknown
+  FUIAuthProviderSignInCompletionBlock completion = _providerSignInCompletion;
+  _providerSignInCompletion = nil;
+  self.currentNonce = nil;
+  if (completion) {
+    completion(nil, error, nil, nil);
+  }
 }
 
 #pragma mark - ASAuthorizationControllerPresentationContextProviding
